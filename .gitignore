@@ -1,0 +1,84 @@
+# ─────────────────────────────
+# Secrets — never commit these
+# ─────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+mnemonic.txt
+
+# ─────────────────────────────
+# Node / Next.js
+# ─────────────────────────────
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─────────────────────────────
+# Hardhat / Solidity
+# ─────────────────────────────
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+deployments/localhost/
+.openzeppelin/unknown-*.json
+
+# ─────────────────────────────
+# Python / FastAPI
+# ─────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# ─────────────────────────────
+# Database
+# ─────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+pgdata/
+postgres-data/
+
+# ─────────────────────────────
+# Editors / OS
+# ─────────────────────────────
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────
+# Misc
+# ─────────────────────────────
+*.log
+.cache/
+tmp/
