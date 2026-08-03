@@ -15,5 +15,4 @@ implements.
 **Stack:** Solidity · Hardhat · web3.py · FastAPI · PostgreSQL ·
 SQLAlchemy · Next.js · TypeScript
 
-[architecture diagram]
-[screenshot: reconciliation view with a detected break]
+
