@@ -1,0 +1,13 @@
+{
+  "network": "sepolia",
+  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "contractAddress": "0x8b71c874cb876a8c780c326ccdacc461764777c5",
+  "deployBlock": 11849025,
+  "issuer": "0x02D29F8901181F2687ABEBA9bd80cD6877669efe",
+  "wallets": {
+    "A": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "B": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    "C": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "D": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
+  }
+}
