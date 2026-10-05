@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import time
 
 from web3 import Web3
@@ -7,8 +8,7 @@ from web3 import Web3
 from common.db import ABI_PATH, CONFIG_PATH, MAX_INT64, connect
 
 ZERO = "0x0000000000000000000000000000000000000000"
-BATCH = 2000
-
+BATCH = int(os.environ.get("INDEX_BATCH", "2000"))
 
 def load_context():
     with open(CONFIG_PATH) as f:

@@ -1,10 +1,11 @@
+import os
 import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-DB_PATH = DATA_DIR / "chainledger.db"
-CONFIG_PATH = DATA_DIR / "chain-config.json"
+DB_PATH = Path(os.environ.get("CHAINLEDGER_DB", DATA_DIR / "chainledger.db"))
+CONFIG_PATH = Path(os.environ.get("CHAIN_CONFIG", DATA_DIR / "chain-config.json"))
 ABI_PATH = (
     ROOT / "contracts" / "artifacts" / "contracts" / "FundShare.sol" / "FundShare.json"
 )
