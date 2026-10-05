@@ -6,7 +6,7 @@
 
 **[Live dashboard](https://chainledger-fzob6wuevrvd5k69ylp25p.streamlit.app/)** | **[Contract on Sepolia](https://sepolia.etherscan.io/address/0x8b71c874cb876a8c780c326ccdacc461764777c5)**
 
-ChainLedger is a prototype tokenised fund share registry. A permissioned ERC-20 token represents fund shares, a Python indexer rebuilds balances from on-chain events, and a four-rule reconciliation engine compares them with an off-chain investor registry. The chain is the settlement truth; the registry is the legal truth; ChainLedger reports where they disagree.
+ChainLedger is a prototype tokenised fund share registry. A permissioned ERC-20 token represents fund shares, a Python indexer rebuilds balances from on-chain events, and a four-rule reconciliation engine compares them with an off-chain investor registry. The chain is the settlement truth; the registry (kept by the transfer agent) is the legal truth; ChainLedger reports where they disagree.
 
 Built as a working prototype of a blockchain architecture for tokenised fund shares, with on-chain / off-chain reconciliation.
 
@@ -31,9 +31,9 @@ The dashboard indexes the Sepolia contract, loads the mock registry, runs the fo
 
 ## Architecture
 
-1. **Contract** (`contracts/contracts/FundShare.sol`): permissioned ERC-20 built on OpenZeppelin v5. Only whitelisted wallets can hold or receive shares; the issuer role whitelists investors, mints (`subscribe`), burns (`redeem`) and can freeze transfers. Every state change emits an event.
+1. **Contract** (`contracts/contracts/FundShare.sol`): permissioned ERC-20 built on OpenZeppelin v5. Only whitelisted wallets can hold or receive shares. A single `issuer` role (the design's Admin and Agent roles combined for the prototype) whitelists investors, mints (`subscribe`), burns (`redeem`) and can freeze transfers. Every state change emits an event.
 2. **Indexer** (`indexer/index_events.py`): reads `Transfer` and `WhitelistUpdated` events with web3.py and stores them in SQLite. It keeps a checkpoint, ignores duplicate events (keyed by transaction hash and log index) and rebuilds balances from the events. `--verify` compares the result with the contract's `balanceOf`, `totalSupply` and `whitelisted`; `--watch` keeps polling for new blocks.
-3. **Registry** (`registry/`): mock off-chain registry loaded from CSV files (investors with KYC status, expected holdings, fund total).
+3. **Registry** (`registry/`): mock transfer-agent registry loaded from CSV files (investors with KYC status, expected holdings, fund total).
 4. **Reconciliation** (`reconcile/`): four rules compare indexed balances with the registry and print a report sorted Critical, Warning, OK.
 5. **Dashboard** (`dashboard/app.py`): Streamlit page that runs the same pipeline against Sepolia and displays the report. An extension beyond the core design.
 
@@ -119,16 +119,27 @@ Sample data on Sepolia: 4 whitelisted wallets holding 500 / 120 / 380 / 60 share
 
 All tests run automatically on every push through GitHub Actions.
 
+## Beyond the original design
+
+The core prototype follows the Case Study II design: permissioned ERC-20, event indexer, mock registry, four rules and a command-line drift report. These were added on top of it:
+
+- Deployment to the Sepolia testnet (listed as future work in the design)
+- A Streamlit dashboard for the drift report (listed as future work in the design)
+- GitHub Actions CI running all contract and Python tests
+- `WhitelistUpdated` indexing and whitelist verification against the contract
+- A freeze switch on the contract, and one `issuer` role in place of separate Admin and Agent roles
+
 ## Scope and limitations
 
 - The registry is a mock; the sample data is deliberately inconsistent so every rule triggers.
 - The contract is not audited and runs on testnet only.
 - Reorg handling would use confirmation depth on a public mainnet; it is not needed for this prototype.
-- A single `issuer` role controls whitelisting, minting, burning and freezing.
+- The `issuer` role is a trusted, centralised actor. This is deliberate for a regulated fund but is a trade-off against decentralisation. Separate Admin and Agent roles are future work.
 
 ## Future work
 
 - Integration with a real transfer agent or KYC provider
-- Alerting and an API for the drift report
+- Unrecorded-transfer and stale-NAV rules
+- A FastAPI endpoint for the drift report
 - Static analysis and a formal security audit
-- Multisig control of the issuer role
+- Multisig control of the issuer role, split into Admin and Agent roles.
