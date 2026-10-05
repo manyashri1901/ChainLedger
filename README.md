@@ -99,3 +99,23 @@ All tests run automatically on every push through GitHub Actions.
 - A web dashboard and API for the drift report
 - Static analysis and a formal security audit
 - Multisig control of the issuer role
+
+## Live on Sepolia testnet
+
+The same contract is deployed on the Sepolia testnet, so the pipeline can be checked against a public chain.
+
+- Contract: [`0x8b71c874cb876a8c780c326ccdacc461764777c5`](https://sepolia.etherscan.io/address/0x8b71c874cb876a8c780c326ccdacc461764777c5)
+- Sample data: 4 whitelisted wallets holding 500 / 120 / 380 / 60 shares (supply 1060)
+
+To run the indexer and report against Sepolia (after `scripts/deploy-sepolia.ts` has written `data/chain-config.sepolia.json`):
+
+```powershell
+$env:CHAIN_CONFIG="data\chain-config.sepolia.json"
+$env:CHAINLEDGER_DB="data\sepolia.db"
+$env:INDEX_BATCH="500"
+python -m indexer.index_events --verify
+python -m registry.load_registry
+python -m reconcile.run
+```
+
+The deploy script needs a funded testnet wallet supplied through the `SEPOLIA_PRIVATE_KEY` and `SEPOLIA_RPC_URL` environment variables. Keys are never stored in the repo. Sepolia ETH has no real value.
