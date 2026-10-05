@@ -6,7 +6,8 @@
 
 ChainLedger is a prototype tokenised fund share registry. A permissioned ERC-20 token represents fund shares, a Python indexer rebuilds balances from on-chain events, and a four-rule reconciliation engine compares them with an off-chain investor registry. The chain is the settlement truth; the registry is the legal truth; ChainLedger reports where they disagree.
 
-Built as the working prototype.
+Built as a working prototype of a blockchain architecture for tokenised fund shares, with on-chain / off-chain reconciliation.
+
 ## Example drift report
 
 ```
@@ -21,8 +22,8 @@ ChainLedger drift report
 
 ## Architecture
 
-1. **Contract** (`contracts/contracts/FundShare.sol`): permissioned ERC-20 built on OpenZeppelin v5. Only whitelisted wallets can hold or receive shares; the issuer role mints (`subscribe`), burns (`redeem`) and can freeze transfers.
-2. **Indexer** (`indexer/index_events.py`): reads `Transfer` events with web3.py and stores them in SQLite. It keeps a checkpoint, ignores duplicate events (keyed by transaction hash and log index) and rebuilds balances from the events.
+1. **Contract** (`contracts/contracts/FundShare.sol`): permissioned ERC-20 built on OpenZeppelin v5. Only whitelisted wallets can hold or receive shares; the issuer role whitelists investors, mints (`subscribe`), burns (`redeem`) and can freeze transfers. Every state change emits an event.
+2. **Indexer** (`indexer/index_events.py`): reads `Transfer` and `WhitelistUpdated` events with web3.py and stores them in SQLite. It keeps a checkpoint, ignores duplicate events (keyed by transaction hash and log index) and rebuilds balances from the events. `--verify` compares the result with the contract's `balanceOf`, `totalSupply` and `whitelisted`; `--watch` keeps polling for new blocks.
 3. **Registry** (`registry/`): mock off-chain registry loaded from CSV files (investors with KYC status, expected holdings, fund total).
 4. **Reconciliation** (`reconcile/`): four rules compare indexed balances with the registry and print a report sorted Critical, Warning, OK.
 
@@ -33,9 +34,22 @@ ChainLedger drift report
 | 3 | KYC revoked in registry but wallet still holds tokens | Critical |
 | 4 | Total on-chain supply differs from registry total | Critical |
 
+The reconciliation engine only reads. It never changes the chain or the registry, so a bug in a rule cannot corrupt ownership records.
+
+## Project structure
+
+```
+contracts/    Solidity contract, Hardhat tests, seed script
+common/       SQLite schema and connection helper
+indexer/      Event indexer
+registry/     Mock registry CSVs and loader
+reconcile/    Rules, report formatting and CLI
+tests/        Python tests (indexer and rules)
+```
+
 ## Tech stack
 
-Solidity, Hardhat 3, OpenZeppelin, viem and node:test (contract tests); Python 3, web3.py, SQLite and pytest (indexer and reconciliation).
+Solidity, Hardhat 3, OpenZeppelin, viem and node:test (contract tests); Python 3, web3.py, SQLite and pytest (indexer and reconciliation); GitHub Actions (CI).
 
 ## Run it locally
 
@@ -66,13 +80,22 @@ If you restart the local node, delete `data\chainledger.db` and run `npm run see
 
 ## Tests
 
-- 12 contract tests (Hardhat, viem, node:test)
-- 11 Python tests (pytest): indexer idempotency, balance verification and each reconciliation rule
+- 12 contract tests (Hardhat, viem, node:test): minting, burning, transfers, whitelist and freeze checks, access control, event emission.
+- 12 Python tests (pytest): indexer idempotency, balance and whitelist verification against the contract, and a trigger and a no-trigger test for each reconciliation rule, plus the full worked example.
+
+All tests run automatically on every push through GitHub Actions.
 
 ## Scope and limitations
 
 - Runs on a local Hardhat network with sample data; the registry is a mock.
 - The contract is not audited.
-- Reorg handling would use confirmation depth on a public network; it is not needed locally.
-- The contract calls its operator `issuer` and uses `subscribe` / `redeem` / `freeze`; the Case Study II report describes the same roles as Agent, mint, burn and Admin.
-- Out of scope: real transfer-agent or KYC integration, testnet deployment, a web dashboard, formal security audit.
+- Reorg handling would use confirmation depth on a public network; it is not needed on a local chain.
+- A single `issuer` role controls whitelisting, minting, burning and freezing.
+
+## Future work
+
+- Integration with a real transfer agent or KYC provider
+- Deployment to a public testnet
+- A web dashboard and API for the drift report
+- Static analysis and a formal security audit
+- Multisig control of the issuer role
