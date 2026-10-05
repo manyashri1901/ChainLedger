@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS chain_balances (
     wallet  TEXT PRIMARY KEY,
     balance INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS chain_whitelist (
+    wallet       TEXT PRIMARY KEY,
+    status       INTEGER NOT NULL,
+    block_number INTEGER NOT NULL,
+    log_index    INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS registry_investors (
     wallet        TEXT PRIMARY KEY,
     investor_name TEXT NOT NULL,

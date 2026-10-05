@@ -61,6 +61,24 @@ def index_once(conn, w3, contract, deploy_block):
                 if receiver != ZERO:
                     _adjust(conn, receiver, amount)
                 new_events += 1
+
+        for log in contract.events.WhitelistUpdated.get_logs(from_block=start, to_block=end):
+            conn.execute(
+                "INSERT INTO chain_whitelist (wallet, status, block_number, log_index) "
+                "VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(wallet) DO UPDATE SET status = excluded.status, "
+                "block_number = excluded.block_number, log_index = excluded.log_index "
+                "WHERE excluded.block_number > chain_whitelist.block_number "
+                "OR (excluded.block_number = chain_whitelist.block_number "
+                "AND excluded.log_index > chain_whitelist.log_index)",
+                (
+                    log["args"]["account"],
+                    1 if log["args"]["status"] else 0,
+                    log["blockNumber"],
+                    log["logIndex"],
+                ),
+            )
+
         conn.execute(
             "INSERT INTO sync_state (id, last_block) VALUES (1, ?) "
             "ON CONFLICT(id) DO UPDATE SET last_block = excluded.last_block",
@@ -87,6 +105,16 @@ def verify_balances(conn, contract):
     return ok
 
 
+def verify_whitelist(conn, contract):
+    ok = True
+    for row in conn.execute("SELECT wallet, status FROM chain_whitelist ORDER BY wallet"):
+        onchain = contract.functions.whitelisted(row["wallet"]).call()
+        status = "MATCH" if bool(row["status"]) == onchain else "MISMATCH"
+        ok = ok and status == "MATCH"
+        print(f"{status:<8} whitelist {row['wallet']}  indexed={bool(row['status'])}  on-chain={onchain}")
+    return ok
+
+
 def main():
     parser = argparse.ArgumentParser(description="ChainLedger event indexer")
     parser.add_argument("--watch", action="store_true", help="keep indexing new blocks")
@@ -101,6 +129,7 @@ def main():
         print(f"indexed {n} new transfer event(s)")
         if args.verify:
             verify_balances(conn, contract)
+            verify_whitelist(conn, contract)
         if not args.watch:
             break
         time.sleep(args.interval)

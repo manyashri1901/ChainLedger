@@ -1,7 +1,7 @@
 import pytest
 
 from common.db import connect
-from indexer.index_events import index_once, load_context, verify_balances
+from indexer.index_events import index_once, load_context, verify_balances, verify_whitelist
 
 
 @pytest.fixture(scope="module")
@@ -31,3 +31,12 @@ def test_balances_equal_balanceof_and_total_supply(ctx, capsys):
     conn = connect(":memory:")
     index_once(conn, w3, contract, cfg["deployBlock"])
     assert verify_balances(conn, contract) is True
+
+
+def test_whitelist_state_matches_contract(ctx):
+    w3, contract, cfg = ctx
+    conn = connect(":memory:")
+    index_once(conn, w3, contract, cfg["deployBlock"])
+    count = conn.execute("SELECT COUNT(*) FROM chain_whitelist").fetchone()[0]
+    assert count == 4
+    assert verify_whitelist(conn, contract) is True
