@@ -183,4 +183,34 @@ describe("FundShare", async function () {
       "NotIssuer",
     );
   });
+
+  it("emits a Transfer event from the zero address on subscribe", async function () {
+    const { fundShare, alice } = await deployFundShare();
+    const aliceAddress = getAddress(alice.account.address);
+    await fundShare.write.addToWhitelist([aliceAddress]);
+
+    await viem.assertions.emitWithArgs(
+      fundShare.write.subscribe([aliceAddress, 500n]),
+      fundShare,
+      "Transfer",
+      ["0x0000000000000000000000000000000000000000", aliceAddress, 500n],
+    );
+  });
+
+  it("leaves supply and whitelist unchanged after non-issuer calls revert", async function () {
+    const { fundShare, alice, bob } = await deployFundShare();
+    const bobAddress = getAddress(bob.account.address);
+    const aliceFundShare = await viem.getContractAt("FundShare", fundShare.address, {
+      client: { wallet: alice },
+    });
+
+    await viem.assertions.revertWithCustomError(
+      aliceFundShare.write.addToWhitelist([bobAddress]),
+      fundShare,
+      "NotIssuer",
+    );
+
+    assert.equal(await fundShare.read.totalSupply(), 0n);
+    assert.equal(await fundShare.read.whitelisted([bobAddress]), false);
+  });
 });
