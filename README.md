@@ -2,6 +2,8 @@
 
 **Detects drift between on-chain fund-share balances and the off-chain legal registry.**
 
+![CI](https://github.com/manyashri1901/ChainLedger/actions/workflows/ci.yml/badge.svg)
+
 ChainLedger is a prototype tokenised fund share registry. A permissioned ERC-20 token represents fund shares, a Python indexer rebuilds balances from on-chain events, and a four-rule reconciliation engine compares them with an off-chain investor registry. The chain is the settlement truth; the registry is the legal truth; ChainLedger reports where they disagree.
 
 Built as the working prototype.
