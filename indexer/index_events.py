@@ -10,6 +10,20 @@ from common.db import ABI_PATH, CONFIG_PATH, MAX_INT64, connect
 ZERO = "0x0000000000000000000000000000000000000000"
 BATCH = int(os.environ.get("INDEX_BATCH", "2000"))
 
+
+def _retry(fn, tries=5):
+    """Call fn(); on an RPC error wait 1s, 2s, 4s... and try again."""
+    delay = 1.0
+    for attempt in range(tries):
+        try:
+            return fn()
+        except Exception:
+            if attempt == tries - 1:
+                raise
+            time.sleep(delay)
+            delay *= 2
+
+
 def load_context():
     with open(CONFIG_PATH) as f:
         cfg = json.load(f)
@@ -35,13 +49,15 @@ def _adjust(conn, wallet, delta):
 def index_once(conn, w3, contract, deploy_block):
     row = conn.execute("SELECT last_block FROM sync_state WHERE id = 1").fetchone()
     last = row["last_block"] if row else deploy_block - 1
-    latest = w3.eth.block_number
+    latest = _retry(lambda: w3.eth.block_number)
     new_events = 0
 
     start = last + 1
     while start <= latest:
         end = min(start + BATCH - 1, latest)
-        logs = contract.events.Transfer.get_logs(from_block=start, to_block=end)
+        logs = _retry(
+            lambda: contract.events.Transfer.get_logs(from_block=start, to_block=end)
+        )
         for log in logs:
             tx_hash = "0x" + bytes(log["transactionHash"]).hex()
             sender = log["args"]["from"]
@@ -62,7 +78,10 @@ def index_once(conn, w3, contract, deploy_block):
                     _adjust(conn, receiver, amount)
                 new_events += 1
 
-        for log in contract.events.WhitelistUpdated.get_logs(from_block=start, to_block=end):
+        whitelist_logs = _retry(
+            lambda: contract.events.WhitelistUpdated.get_logs(from_block=start, to_block=end)
+        )
+        for log in whitelist_logs:
             conn.execute(
                 "INSERT INTO chain_whitelist (wallet, status, block_number, log_index) "
                 "VALUES (?, ?, ?, ?) "
