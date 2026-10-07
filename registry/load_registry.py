@@ -1,4 +1,7 @@
 import csv
+import json
+import os
+import urllib.request
 from pathlib import Path
 
 from web3 import Web3
@@ -13,10 +16,27 @@ def _rows(name):
         return list(csv.DictReader(f))
 
 
+def _fetch(path):
+    base = os.environ["REGISTRY_API_URL"].rstrip("/")
+    req = urllib.request.Request(
+        base + path,
+        headers={"X-API-Key": os.environ.get("REGISTRY_API_KEY", "dev-key")},
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+
+def _source(csv_name, api_path):
+    """Registry rows from the API when REGISTRY_API_URL is set, else from CSV."""
+    if os.environ.get("REGISTRY_API_URL"):
+        return _fetch(api_path)
+    return _rows(csv_name)
+
+
 def load_registry(conn):
-    investors = _rows("investors.csv")
-    holdings = _rows("holdings.csv")
-    fund = _rows("fund.csv")
+    investors = _source("investors.csv", "/investors")
+    holdings = _source("holdings.csv", "/holdings")
+    fund = _source("fund.csv", "/fund")
 
     conn.execute("DELETE FROM registry_holdings")
     conn.execute("DELETE FROM registry_investors")
