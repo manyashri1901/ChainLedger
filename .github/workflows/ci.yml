@@ -4,15 +4,15 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -47,3 +47,4 @@ jobs:
           REGISTRY_API_URL=http://127.0.0.1:8000 python -m registry.load_registry
           REGISTRY_API_URL=http://127.0.0.1:8000 python -m reconcile.run
           cat api.log
+
