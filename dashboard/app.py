@@ -1,5 +1,6 @@
 import json
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from registry.load_registry import load_registry
 
 cfg = json.loads((ROOT / "deployments" / "sepolia.json").read_text())
 abi = json.loads((ROOT / "deployments" / "FundShare.abi.json").read_text())
+SNAPSHOT = ROOT / "deployments" / "sepolia-snapshot.db"
 
 SEV_COLOR = {"CRITICAL": "#ffd6d6", "WARNING": "#fff1c2", "OK": "#d9f2dd"}
 
@@ -27,12 +29,25 @@ st.set_page_config(page_title="ChainLedger", layout="wide")
 
 @st.cache_data(ttl=60, show_spinner="Reading the Sepolia chain...")
 def compute():
-    w3 = Web3(Web3.HTTPProvider(cfg["rpcUrl"]))
-    contract = w3.eth.contract(
-        address=Web3.to_checksum_address(cfg["contractAddress"]), abi=abi
-    )
     conn = connect(":memory:")
-    index_once(conn, w3, contract, cfg["deployBlock"])
+    if SNAPSHOT.exists():
+        src = sqlite3.connect(SNAPSHOT)
+        src.backup(conn)
+        src.close()
+
+    live = True
+    try:
+        w3 = Web3(Web3.HTTPProvider(cfg["rpcUrl"]))
+        contract = w3.eth.contract(
+            address=Web3.to_checksum_address(cfg["contractAddress"]), abi=abi
+        )
+        index_once(conn, w3, contract, cfg["deployBlock"])
+        block = w3.eth.block_number
+    except Exception:
+        live = False
+        row = conn.execute("SELECT last_block FROM sync_state WHERE id = 1").fetchone()
+        block = row["last_block"] if row else 0
+
     load_registry(conn)
     findings = run_rules(conn)
     balances = [
@@ -42,16 +57,22 @@ def compute():
     registry_total = conn.execute(
         "SELECT COALESCE(SUM(total_shares), 0) FROM registry_fund"
     ).fetchone()[0]
-    return findings, balances, registry_total, w3.eth.block_number
+    return findings, balances, registry_total, block, live
 
 
 st.title("ChainLedger")
 st.caption(
     "Drift between on-chain fund-share balances and the off-chain legal registry. "
-    "Live data from the Sepolia testnet."
+    "Data from the Sepolia testnet."
 )
 
-findings, balances, registry_total, block = compute()
+findings, balances, registry_total, block, live = compute()
+
+if not live:
+    st.warning(
+        "The public Sepolia node did not respond, so this page shows the last saved "
+        f"snapshot of the chain (up to block {block})."
+    )
 
 onchain_supply = sum(b["balance"] for b in balances)
 critical = sum(1 for f in findings if f.severity == "CRITICAL")
