@@ -31,7 +31,7 @@ jobs:
 
       - name: Python tests
         run: |
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-api.txt
           python -m pytest -v
 
       - name: Drift report
@@ -39,3 +39,11 @@ jobs:
           python -m indexer.index_events --verify
           python -m registry.load_registry
           python -m reconcile.run
+
+      - name: Drift report using the registry API
+        run: |
+          nohup python -m uvicorn registry_api.server:app --port 8000 > api.log 2>&1 &
+          sleep 5
+          REGISTRY_API_URL=http://127.0.0.1:8000 python -m registry.load_registry
+          REGISTRY_API_URL=http://127.0.0.1:8000 python -m reconcile.run
+          cat api.log
